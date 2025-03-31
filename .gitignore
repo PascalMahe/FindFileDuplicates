@@ -1,0 +1,8 @@
+bin/*
+.vscode
+__pycache__
+folder_A/*
+log/*
+.env/*
+.venv/*
+localEnv/*
