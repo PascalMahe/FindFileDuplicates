@@ -97,7 +97,8 @@ def create_main_widget(main_window):
     main_window.results_tree.setRootIsDecorated(False)  # Hide the default expansion indicator
     main_window.results_tree.setMinimumWidth(415)
     main_window.results_tree.setColumnWidth(0, 35) # type column is narrow
-    main_window.results_tree.setColumnWidth(2, 35) # size column is also narro
+    main_window.results_tree.setColumnWidth(2, 35) # size column is also narrow
+    main_window.results_tree.setSortingEnabled(True)
 
     right_layout.addWidget(main_window.folder_label)
     right_layout.addWidget(main_window.results_tree)
