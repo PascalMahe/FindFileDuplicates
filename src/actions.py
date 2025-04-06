@@ -41,6 +41,7 @@ def launch_analysis(main_window):
 
     # Update results table
     update_results_table(main_window, duplicate_files)
+    # update_results_table(main_window, duplicate_files, duplicate_folders)
     main_window.status_label.setText("Analysis complete.")  # Update status
 
 
@@ -64,8 +65,11 @@ def create_result_item(tree, data, locations):
     # Add the item to the tree.
     tree.addTopLevelItem(item)
     
-    # Compute the common path among all duplicate locations.
-    common_prefix = os.path.commonpath(locations) if locations else ""
+    # Compute the common path among all duplicate locations
+    if type(locations) == str or type(locations) == bytes or type(locations) == os.PathLike:
+        common_prefix = os.path.commonpath(locations) if locations else ""
+    else:
+        common_prefix = ""
     
     # Create a composite widget for the last column.
     composite = QWidget()
@@ -99,6 +103,7 @@ def create_result_item(tree, data, locations):
 
 
 def update_results_table(main_window, duplicate_files):
+# def update_results_table(main_window, duplicate_files, duplicate_folders):
     """
     Expects duplicate_files to be a dictionary with keys: (folder_name, file_name, file_size)
     and values: list of duplicate locations.
@@ -107,11 +112,16 @@ def update_results_table(main_window, duplicate_files):
     tree.clear()
     
     longest_name = ""
-    for (folder_name, file_name, file_size), locations in duplicate_files.items():
-        # In this example, we treat the result type as "File"
-        create_result_item(tree, ("File", " " + file_name, file_size), locations)
+    for (file_type, file_name, file_size), locations in duplicate_files.items():
+        create_result_item(tree, (file_type, " " + file_name, file_size), locations)
         if len(file_name) > len(longest_name):
             longest_name = file_name
+
+    # for (folder_parent, folder_name), locations in duplicate_folders.items():
+    #     print(f"update_results_table - locations: {locations}")
+    #     create_result_item(tree, ("Folder", " " + folder_name, "-"), locations)
+    #     if len(file_name) > len(longest_name):
+    #         longest_name = file_name
     
     # computing width of longest_string
     font_metrics = QFontMetrics(tree.font())
