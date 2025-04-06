@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 
 
 from actions import select_file, update_button_style, launch_analysis
+from worker import AnalysisWorker
 
 def create_main_widget(main_window):
     """Creates the main widget layout and returns it."""
@@ -21,8 +22,26 @@ def create_main_widget(main_window):
     main_window.folder_name_input.textChanged.connect(lambda: update_button_style(main_window))
     # Browse button
     main_window.browse_button = QPushButton("Browse")
-    # main_window.browse_button.clicked.connect(main_window.select_file)
     main_window.browse_button.clicked.connect(lambda: select_file(main_window))
+
+    main_window.stop_button = QPushButton("Stop analysis")
+    main_window.stop_button.setStyleSheet("""
+        QPushButton[active="false"] {
+            background-color: #d3d3d3;  /* Disabled gray */
+            color: gray;
+            border: 1px solid #a9a9a9;
+        }
+
+        QPushButton[active="true"] {
+            background-color: lightgreen;
+            color: darkgreen;
+            font-weight: bold;
+            border: 1px solid #a9a9a9;
+        }
+    """)
+    main_window.stop_button.clicked.connect(
+        lambda: main_window.worker.stop() if hasattr(main_window, "worker") and isinstance(main_window.worker, AnalysisWorker) else None
+    )
 
     # Launch Analysis button
     main_window.launch_button = QPushButton("Launch Processing")
@@ -52,9 +71,7 @@ def create_main_widget(main_window):
             background-color: #90ee90;  /* Lighter green when clicked */
         }
     """)
-    # main_window.launch_button.clicked.connect(main_window.launch_analysis)
     main_window.launch_button.clicked.connect(lambda: launch_analysis(main_window))
-    # main_window.update_button_style()  # Set initial button style
     update_button_style(main_window)
 
     main_window.separator = QFrame(main_window)
@@ -67,6 +84,7 @@ def create_main_widget(main_window):
     button_layout = QVBoxLayout()
     button_layout.addWidget(main_window.browse_button)
     button_layout.addWidget(main_window.launch_button)
+    button_layout.addWidget(main_window.stop_button)
     button_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Keep buttons centered
 
 

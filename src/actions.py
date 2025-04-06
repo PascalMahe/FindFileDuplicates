@@ -1,12 +1,12 @@
 import os
 import subprocess
 
+from PyQt6.QtCore import QThread
 from PyQt6.QtGui import QFontMetrics, QIcon
 from PyQt6.QtWidgets import QFileDialog, QTreeWidgetItem, QToolButton, QWidget, QLabel, QHBoxLayout, QPushButton, QMessageBox, QSpacerItem, QSizePolicy
 
-
-
-from analysis import analyze_duplicates
+from worker import AnalysisWorker
+# from analysis import analyze_duplicates
 
 def select_file(main_window):
     """Opens a folder dialog and sets the text of the folder_name_input."""
@@ -24,26 +24,58 @@ def update_button_style(main_window):
     main_window.launch_button.style().unpolish(main_window.launch_button)
     main_window.launch_button.style().polish(main_window.launch_button)
 
+    main_window.stop_button.setProperty("active", False)
+
+# def launch_analysis(main_window):
+#     """Performs analysis and updates the UI accordingly."""
+#     folder_path = main_window.folder_name_input.text()
+#     if not folder_path or not os.path.isdir(folder_path):
+#         main_window.status_label.setText("Invalid folder. Please select a valid directory.")
+#         return {}, {}
+
+#     folder_path = folder_path.replace("/", "\\")
+#     main_window.status_label.setText("Processing...")
+
+#     # duplicate_files, duplicate_folders = analyze_duplicates(folder_path)
+#     duplicate_files = analyze_duplicates(folder_path)
+    
+#     main_window.folder_label.setText(f"Analyzed Folder: {folder_path}")
+
+#     update_results_table(main_window, duplicate_files)
+#     main_window.status_label.setText("Analysis complete.")
+
 def launch_analysis(main_window):
-    """Performs analysis and updates the UI accordingly."""
     folder_path = main_window.folder_name_input.text()
     if not folder_path or not os.path.isdir(folder_path):
         main_window.status_label.setText("Invalid folder. Please select a valid directory.")
-        return {}, {}
+        return
 
     folder_path = folder_path.replace("/", "\\")
     main_window.status_label.setText("Processing...")
 
-    # duplicate_files, duplicate_folders = analyze_duplicates(folder_path)
-    duplicate_files = analyze_duplicates(folder_path)
-    
-    main_window.folder_label.setText(f"Analyzed Folder: {folder_path}")
+    # Cancel previous thread if still running
+    if hasattr(main_window, "analysis_thread") and main_window.analysis_thread.isRunning():
+        main_window.worker.stop()
+        main_window.analysis_thread.quit()
+        main_window.analysis_thread.wait()
 
-    # Update results table
-    update_results_table(main_window, duplicate_files)
-    # update_results_table(main_window, duplicate_files, duplicate_folders)
-    main_window.status_label.setText("Analysis complete.")  # Update status
+    # Create new worker and thread
+    main_window.analysis_thread = QThread()
+    main_window.worker = AnalysisWorker(folder_path)
+    main_window.worker.moveToThread(main_window.analysis_thread)
 
+    # Connect signals and slots
+    main_window.analysis_thread.started.connect(main_window.worker.run)
+    main_window.worker.finished.connect(lambda results: on_analysis_finished(main_window, results))
+    main_window.worker.finished.connect(main_window.analysis_thread.quit)
+    main_window.analysis_thread.start()
+    main_window.stop_button.setProperty("active", True)
+
+def on_analysis_finished(main_window, results):
+    main_window.stop_button.setProperty("active", False)
+    main_window.folder_label.setText(f"Analyzed Folder: {main_window.folder_name_input.text()}")
+    update_results_table(main_window, results)
+    main_window.status_label.setText("Analysis complete.")
 
 def create_result_item(tree, data, locations):
     """
