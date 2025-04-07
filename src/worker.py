@@ -1,6 +1,8 @@
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-import os
 from collections import defaultdict
+import os
+import time
+
+from PyQt6.QtCore import QObject, pyqtSignal
 
 class AnalysisWorker(QObject):
     finished = pyqtSignal(dict)
@@ -18,6 +20,9 @@ class AnalysisWorker(QObject):
         duplicate_results = defaultdict(list)
         file_records = defaultdict(list)
         folder_signatures = defaultdict(list)
+
+
+        time.sleep(5.5)
 
         for root, dirs, files in os.walk(self.folder_path, topdown=False):
             if self._should_stop:

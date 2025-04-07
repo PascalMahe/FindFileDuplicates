@@ -1,11 +1,11 @@
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
      QWidget, QVBoxLayout,  QLabel, QLineEdit, QPushButton, QFrame, QSplitter, QTreeWidget
 )
 
 
-from actions import select_file, update_button_style, launch_analysis
+from actions import select_file, update_button_style, launch_analysis, stop_worker_if_exists, update_elapsed_time
 from worker import AnalysisWorker
 
 def create_main_widget(main_window):
@@ -29,19 +29,24 @@ def create_main_widget(main_window):
         QPushButton[active="false"] {
             background-color: #d3d3d3;  /* Disabled gray */
             color: gray;
-            border: 1px solid #a9a9a9;
+            border: solid;
         }
 
         QPushButton[active="true"] {
-            background-color: lightgreen;
-            color: darkgreen;
+            background-color: red;
+            color: white;
             font-weight: bold;
-            border: 1px solid #a9a9a9;
+            border: solid #a9a9a9;
+        }
+
+        QPushButton:pressed {
+            color: gray;
+            font-weight: bold;
+            background-color: darkred;
         }
     """)
-    main_window.stop_button.clicked.connect(
-        lambda: main_window.worker.stop() if hasattr(main_window, "worker") and isinstance(main_window.worker, AnalysisWorker) else None
-    )
+    
+    main_window.stop_button.clicked.connect(lambda: stop_worker_if_exists(main_window))
 
     # Launch Analysis button
     main_window.launch_button = QPushButton("Launch Processing")
@@ -138,5 +143,11 @@ def create_main_widget(main_window):
     # Set main layout
     main_window.setLayout(main_layout)
     main_window.setWindowTitle("Analysis Tool")
+
+    main_window.analysis_timer = QTimer()
+    main_window.analysis_timer.setInterval(1000)  # 1000 ms = 1 second
+    main_window.analysis_timer.timeout.connect(lambda: update_elapsed_time(main_window))
+    main_window.analysis_start_time = None
+
 
     return main_layout

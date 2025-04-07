@@ -1,7 +1,8 @@
 import os
 import subprocess
+import time
 
-from PyQt6.QtCore import QThread
+from PyQt6.QtCore import QThread, QThread
 from PyQt6.QtGui import QFontMetrics, QIcon
 from PyQt6.QtWidgets import QFileDialog, QTreeWidgetItem, QToolButton, QWidget, QLabel, QHBoxLayout, QPushButton, QMessageBox, QSpacerItem, QSizePolicy
 
@@ -25,6 +26,8 @@ def update_button_style(main_window):
     main_window.launch_button.style().polish(main_window.launch_button)
 
     main_window.stop_button.setProperty("active", False)
+    main_window.stop_button.style().unpolish(main_window.stop_button)
+    main_window.stop_button.style().polish(main_window.stop_button)
 
 # def launch_analysis(main_window):
 #     """Performs analysis and updates the UI accordingly."""
@@ -45,13 +48,17 @@ def update_button_style(main_window):
 #     main_window.status_label.setText("Analysis complete.")
 
 def launch_analysis(main_window):
+    
+    main_window.analysis_start_time = time.time()
+    main_window.analysis_timer.start()
+    main_window.status_label.setText("Processing... 0s elapsed")
+
     folder_path = main_window.folder_name_input.text()
     if not folder_path or not os.path.isdir(folder_path):
         main_window.status_label.setText("Invalid folder. Please select a valid directory.")
         return
 
     folder_path = folder_path.replace("/", "\\")
-    main_window.status_label.setText("Processing...")
 
     # Cancel previous thread if still running
     if hasattr(main_window, "analysis_thread") and main_window.analysis_thread.isRunning():
@@ -69,13 +76,33 @@ def launch_analysis(main_window):
     main_window.worker.finished.connect(lambda results: on_analysis_finished(main_window, results))
     main_window.worker.finished.connect(main_window.analysis_thread.quit)
     main_window.analysis_thread.start()
+
     main_window.stop_button.setProperty("active", True)
+    # main_window.stop_button.style().unpolish(main_window.stop_button)
+    main_window.stop_button.style().polish(main_window.stop_button)
+
 
 def on_analysis_finished(main_window, results):
+    main_window.analysis_timer.stop()
     main_window.stop_button.setProperty("active", False)
+    # main_window.stop_button.style().unpolish(main_window.stop_button)
+    main_window.stop_button.style().polish(main_window.stop_button)
     main_window.folder_label.setText(f"Analyzed Folder: {main_window.folder_name_input.text()}")
     update_results_table(main_window, results)
-    main_window.status_label.setText("Analysis complete.")
+
+    elapsed = int(time.time() - main_window.analysis_start_time)
+    main_window.analysis_start_time = None
+    main_window.status_label.setText(f"Analysis complete ({elapsed} s).")
+
+def stop_worker_if_exists(main_window):
+    if hasattr(main_window, "worker") and isinstance(main_window.worker, AnalysisWorker):
+        main_window.worker.stop()
+        main_window.analysis_thread.quit()
+        main_window.status_label.setText("Analysis canceled.")
+        main_window.results_tree.clear()
+        main_window.analysis_timer.stop()
+        main_window.analysis_start_time = None
+        update_button_style(main_window)
 
 def create_result_item(tree, data, locations):
     """
@@ -223,6 +250,13 @@ def toggle_details(item, expanded, locations, common_prefix):
         # Remove all child items
         item.takeChildren()
 
+
+def update_elapsed_time(main_window):
+    if main_window.analysis_start_time is None:
+        return
+    elapsed = int(time.time() - main_window.analysis_start_time)
+    main_window.status_label.setText(f"Processing... ({elapsed} s elapsed)")
+
 def open_in_explorer(file_path):
     """Opens the file location in the OS file explorer."""
     if os.path.exists(file_path):
@@ -251,4 +285,3 @@ def delete_file(file_path, item):
                 parent.removeChild(item)
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Could not delete file:\n{e}")
-
